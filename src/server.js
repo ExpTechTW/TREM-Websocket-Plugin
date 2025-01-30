@@ -2,6 +2,7 @@ const WebSocket = require("../node_modules/ws/index");
 
 class Server {
   static instance;
+  ws_verify_list = [];
 
   constructor(logger, urls, config, exptech_config, TREM, MixinManager) {
     if (Server.instance)
@@ -18,7 +19,7 @@ class Server {
     this.exptech_config = exptech_config;
     this.get_exptech_config = this.exptech_config.getConfig();
     this.TREM = TREM;
-    
+
     const rts = null, eew = null, intensity = null, lpgm = null, tsunami = null, report = null, rtw = null;
     this.data = { rts, eew, intensity, lpgm, tsunami, report, rtw };
 
@@ -28,20 +29,54 @@ class Server {
       key     : this.get_exptech_config.user.token ?? "",
     };
 
-    this.connect();
+    this.ws_verify_list = Server.ws_verify_list;
     this.ws_time = 0;
 
-    setInterval(() => {
-      if (this.ws_gg)
-        this.connect();
-      else if ((Date.now() - this.ws_time > 30_000 && this.ws_time != 0))
-        this.connect();
-    }, 3000);
+    this.connect();
 
-    this.requestCounter = 0;
-    this.activeRequests = [];
+    this.connect_clock = setInterval(() => this.runCheckconnect(), 3000);
 
     Server.instance = this;
+  }
+
+  runCheckconnect() {
+    if (this.ws_gg)
+      this.connect();
+    else if ((Date.now() - this.ws_time > 30_000 && this.ws_time != 0))
+      this.connect();
+  }
+
+  get_ws_verify_list() {
+    return this.ws_verify_list;
+  }
+
+  set_ws_open(ws_open) {
+    if (!ws_open) {
+      if (this.reconnect) this.reconnect = false;
+      if (this.connect_clock) {
+        clearInterval(this.connect_clock);
+        this.connect_clock = null;
+      }
+      this.ws_time = 0;
+      this.ws.close();
+      this.ws_gg = false;
+      this.ws = null;
+      this.logger.info("WebSocket close -> chenges");
+    } else {
+      if (!this.reconnect) this.reconnect = true;
+      if (this.info_get) this.info_get = false;
+      if (!this.connect_clock) {
+        this.connect_clock = setInterval(() => this.runCheckconnect(), 3000);
+      }
+      this.get_exptech_config = this.exptech_config.getConfig();
+      this.wsConfig = {
+        type    : "start",
+        service : this.config.service,
+        key     : this.get_exptech_config.user.token ?? "",
+      };
+      this.connect();
+      this.logger.info("WebSocket open -> chenges");
+    }
   }
 
   connect() {
@@ -57,6 +92,7 @@ class Server {
   ws_event() {
     this.ws.onclose = () => {
       this.ws_gg = true;
+      this.logger.warn(this.connect_clock);
       this.logger.warn("WebSocket close");
     };
 
@@ -85,25 +121,43 @@ class Server {
             this.reconnect = false;
             this.logger.info("WebSocket close -> 401");
             this.ws.close();
+            this.ws = null;
           } else if (json.data.code == 200) {
             this.ws_time = Date.now();
             if (!this.info_get) {
               this.info_get = true;
               this.logger.info("info:", json.data);
-
+              this.ws_verify_list = json.data.list;
               if (json.data.list.includes("trem.eew")) {
-                const eewSource = JSON.parse(localStorage.getItem("eew-source-plugin")) || [];
-                if (eewSource.includes("trem")) this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter(author => author != "cwa");
+                if (this.config.SHOW_BOTH_EEW) {
+                  this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'cwa');
+                  this.TREM.constant.EEW_AUTHOR.push("cwa");
+                  this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'trem');
+                  this.TREM.constant.EEW_AUTHOR.push("trem");
+                  this.TREM.constant.SHOW_TREM_EEW = true;
+                  localStorage.setItem(
+                    "eew-source-plugin",
+                    JSON.stringify(this.TREM.constant.EEW_AUTHOR),
+                  );
+                } else {
+                  this.TREM.constant.SHOW_TREM_EEW = true;
+                  const eewSource = JSON.parse(localStorage.getItem("eew-source-plugin")) || [];
+                  if (eewSource.includes("trem")) this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter(author => author != "cwa");
+                }
                 this.logger.info("EEW_AUTHOR:", this.TREM.constant.EEW_AUTHOR);
               }
             }
-          } else if (json.data.code == 400)
+            if (this.TREM.variable.play_mode != 2) {
+              this.TREM.variable.play_mode = 1;
+              const button = document.querySelector("#websocket");
+              button.title = "WebSocket 切換到 HTTP";
+            }
+          } else if (json.data.code == 400) {
             this.send(this.wsConfig);
-
+          }
           break;
         }
         case "data":{
-          if (this.TREM.variable.play_mode == 0) this.TREM.variable.play_mode = 1;
           switch (json.data.type) {
             case "rts":
               this.ws_time = Date.now();
@@ -121,9 +175,10 @@ class Server {
               }
               break;
             case "tsunami":
-              this.data.tsunami = json.data;
-              break;
-            case "eew":
+              this.logger.info("data tsunami:", json.data);
+							this.data.tsunami = json.data;
+							break;
+						case "eew":
               this.logger.info("data eew:", json.data);
               this.data.eew = json.data;
               if (this.TREM.variable.play_mode == 1) this.processEEWData(this.data.eew);
@@ -131,13 +186,22 @@ class Server {
             case "intensity":
               this.logger.info("data intensity:", json.data);
               this.data.intensity = json.data;
-              break;
-            case "report":
-              this.data.report = json.data;
-              break;
-            case "rtw":
-              this.data.rtw = json.data;
-              break;
+              if (this.TREM.variable.play_mode === 1) this.processIntensityData(this.data.intensity);
+							break;
+						case "report":
+              this.logger.info("data report:", json.data);
+							this.data.report = json.data.data;
+              if (this.TREM.variable.play_mode === 1) {
+                const url = this.TREM.constant.URL.API[Math.floor(Math.random() * this.TREM.constant.URL.API.length)];
+                const data = json.data.data;
+                if (data) {
+                  this.TREM.variable.events.emit('ReportRelease', { info: { url }, data });
+                }
+              }
+							break;
+						case "rtw":
+							this.data.rtw = json.data;
+							break;
             case "lpgm":
               this.logger.info("data lpgm:", json.data);
               this.data.lpgm = json.data;
