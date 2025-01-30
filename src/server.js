@@ -94,8 +94,6 @@ class Server {
       this.ws_gg = true;
       this.logger.warn(this.connect_clock);
       this.logger.warn("WebSocket close");
-
-      // setTimeout(this.connect, 3000);
     };
 
     this.ws.onerror = (error) => {
@@ -164,17 +162,15 @@ class Server {
             case "rts":
               this.ws_time = Date.now();
               this.data.rts = json.data.data;
-              if (this.TREM.variable.play_mode === 1) {
+              if (this.TREM.variable.play_mode == 1) {
                 this.TREM.variable.data.rts = this.data.rts;
                 this.TREM.variable.events.emit("DataRts", {
                   info : { type: this.TREM.variable.play_mode },
                   data : this.data.rts,
                 });
-                this.TREM.variable.cache.last_data_time = this.ws_time;
+                this.TREM.variable.cache.last_data_time = Date.now();
                 if (this.data.rts.int.length == 0) {
                   this.processEEWData();
-                  this.processIntensityData();
-                  this.processLpgmData();
                 }
               }
               break;
@@ -185,7 +181,7 @@ class Server {
 						case "eew":
               this.logger.info("data eew:", json.data);
               this.data.eew = json.data;
-              if (this.TREM.variable.play_mode === 1) this.processEEWData(this.data.eew);
+              if (this.TREM.variable.play_mode == 1) this.processEEWData(this.data.eew);
               break;
             case "intensity":
               this.logger.info("data intensity:", json.data);
@@ -209,7 +205,6 @@ class Server {
             case "lpgm":
               this.logger.info("data lpgm:", json.data);
               this.data.lpgm = json.data;
-              if (this.TREM.variable.play_mode === 1) this.processLpgmData(this.data.lpgm);
               break;
             default:
               this.logger.info("data:", json.data);
@@ -306,111 +301,6 @@ class Server {
     });
   }
 
-  processIntensityData(data = {}) {
-    const currentTime = this.now();
-    const EXPIRY_TIME = 600 * 1000;
-
-    this.TREM.variable.data.intensity
-      .filter((item) =>
-        item.id
-        && (currentTime - item.id > EXPIRY_TIME || item.IntensityEnd),
-      )
-      .forEach((data) => {
-        this.TREM.variable.events.emit("IntensityEnd", {
-          info : { type: this.TREM.variable.play_mode },
-          data : { ...data, IntensityEnd: true },
-        });
-      });
-
-    this.TREM.variable.data.intensity = this.TREM.variable.data.intensity.filter((item) =>
-      item.id
-      && currentTime - item.id <= EXPIRY_TIME
-      && !item.IntensityEnd,
-    );
-
-    if (!data.id || currentTime - data.id > EXPIRY_TIME || data.IntensityEnd)
-      return;
-
-
-    const existingIndex = this.TREM.variable.data.intensity.findIndex((item) => item.id == data.id);
-    const eventData = {
-      info: { type: this.TREM.variable.play_mode },
-      data,
-    };
-
-    if (existingIndex == -1)
-      if (!this.TREM.variable.cache.intensity_last[data.id]) {
-        this.TREM.variable.cache.intensity_last[data.id] = {
-          last_time : currentTime,
-          serial    : 1,
-        };
-        this.TREM.variable.data.intensity.push(data);
-        this.TREM.variable.events.emit("IntensityRelease", eventData);
-        return;
-      }
-
-
-    if (this.TREM.variable.cache.intensity_last[data.id] && this.TREM.variable.cache.intensity_last[data.id].serial < data.serial) {
-      this.TREM.variable.cache.intensity_last[data.id].serial = data.serial;
-      if (this.isAreaDifferent(data.area, this.TREM.variable.data.intensity[existingIndex].area)) {
-        this.TREM.variable.events.emit("IntensityUpdate", eventData);
-        this.TREM.variable.data.intensity[existingIndex] = data;
-      }
-    }
-
-    this.cleanupCache("intensity_last");
-
-    this.TREM.variable.events.emit("DataIntensity", {
-      info : { type: this.TREM.variable.play_mode },
-      data : this.TREM.variable.data.intensity,
-    });
-  }
-
-  processLpgmData(data = {}) {
-    const currentTime = this.now();
-    const EXPIRY_TIME = 600 * 1000;
-
-    this.TREM.variable.data.lpgm
-      .filter((item) =>
-        item.time
-        && (currentTime - item.time > EXPIRY_TIME || item.LpgmEnd),
-      )
-      .forEach((data) => {
-        this.TREM.variable.events.emit("LpgmEnd", {
-          info : { type: this.TREM.variable.play_mode },
-          data : { ...data, LpgmEnd: true },
-        });
-      });
-
-    this.TREM.variable.data.lpgm = this.TREM.variable.data.lpgm.filter((item) =>
-      item.time
-      && currentTime - item.time <= EXPIRY_TIME
-      && !item.LpgmEnd,
-    );
-
-    if (!data.id || data.LpgmEnd)
-      return;
-
-
-    const existingIndex = this.TREM.variable.data.lpgm.findIndex((item) => item.id == data.id);
-    const eventData = {
-      info: { type: this.TREM.variable.play_mode },
-      data,
-    };
-
-    if (existingIndex == -1) {
-      data.id = Number(data.id);
-      data.time = this.now();
-      this.TREM.variable.data.lpgm.push(data);
-      this.TREM.variable.events.emit("LpgmRelease", eventData);
-    }
-
-    this.TREM.variable.events.emit("DataLpgm", {
-      info : { type: this.TREM.variable.play_mode },
-      data : this.TREM.variable.data.lpgm,
-    });
-  }
-
   cleanupCache(cacheKey) {
     const currentTime = this.now();
     Object.keys(this.TREM.variable.cache[cacheKey]).forEach((id) => {
@@ -421,40 +311,16 @@ class Server {
     });
   }
 
-  isAreaDifferent(area1, area2) {
-    if (!area1 || !area2)
-      return true;
-
-
-    const keys1 = Object.keys(area1);
-    const keys2 = Object.keys(area2);
-
-    if (keys1.length !== keys2.length)
-      return true;
-
-
-    return keys1.some((key) => {
-      const arr1 = area1[key] || [];
-      const arr2 = area2[key] || [];
-      if (arr1.length !== arr2.length)
-        return true;
-
-      return !arr1.every((val) => arr2.includes(val));
-    });
-  }
-
   now() {
     if (this.TREM.variable.play_mode == 2 || this.TREM.variable.play_mode == 3) {
       if (!this.TREM.variable.replay.local_time)
         this.TREM.variable.replay.local_time = Date.now();
-
 
       return this.TREM.variable.replay.start_time + (Date.now() - this.TREM.variable.replay.local_time);
     }
 
     if (!this.TREM.variable.cache.time.syncedTime || !this.TREM.variable.cache.time.lastSync)
       return Date.now();
-
 
     const offset = Date.now() - this.TREM.variable.cache.time.lastSync;
     return this.TREM.variable.cache.time.syncedTime + offset;
