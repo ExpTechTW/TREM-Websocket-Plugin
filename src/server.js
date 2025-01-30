@@ -114,7 +114,7 @@ class Server {
                   info : { type: this.TREM.variable.play_mode },
                   data : this.data.rts,
                 });
-                this.TREM.variable.cache.last_data_time = this.now();
+                this.TREM.variable.cache.last_data_time = Date.now();
                 if (this.data.rts.int.length == 0) {
                   this.processEEWData();
                 }
