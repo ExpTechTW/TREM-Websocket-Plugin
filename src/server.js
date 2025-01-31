@@ -171,6 +171,7 @@ class Server {
                 this.TREM.variable.cache.last_data_time = Date.now();
                 if (this.data.rts.int.length == 0) {
                   this.processEEWData();
+                  this.processIntensityData();
                 }
               }
               break;
@@ -298,6 +299,66 @@ class Server {
     this.TREM.variable.events.emit("DataEew", {
       info : { type: this.TREM.variable.play_mode },
       data : this.TREM.variable.data.eew,
+    });
+  }
+
+  processIntensityData(data = {}) {
+    const currentTime = this.now();
+    const EXPIRY_TIME = 600 * 1000;
+
+    this.TREM.variable.data.intensity
+      .filter((item) =>
+        item.id
+        && (currentTime - item.id > EXPIRY_TIME || item.IntensityEnd),
+      )
+      .forEach((data) => {
+        this.TREM.variable.events.emit("IntensityEnd", {
+          info : { type: this.TREM.variable.play_mode },
+          data : { ...data, IntensityEnd: true },
+        });
+      });
+
+    this.TREM.variable.data.intensity = this.TREM.variable.data.intensity.filter((item) =>
+      item.id
+      && currentTime - item.id <= EXPIRY_TIME
+      && !item.IntensityEnd,
+    );
+
+    if (!data.id || currentTime - data.id > EXPIRY_TIME || data.IntensityEnd)
+      return;
+
+
+    const existingIndex = this.TREM.variable.data.intensity.findIndex((item) => item.id == data.id);
+    const eventData = {
+      info: { type: this.TREM.variable.play_mode },
+      data,
+    };
+
+    if (existingIndex == -1)
+      if (!this.TREM.variable.cache.intensity_last[data.id]) {
+        this.TREM.variable.cache.intensity_last[data.id] = {
+          last_time : currentTime,
+          serial    : 1,
+        };
+        this.TREM.variable.data.intensity.push(data);
+        this.TREM.variable.events.emit("IntensityRelease", eventData);
+        return;
+      }
+
+
+    if (this.TREM.variable.cache.intensity_last[data.id] && this.TREM.variable.cache.intensity_last[data.id].serial < data.serial) {
+      this.TREM.variable.cache.intensity_last[data.id].serial = data.serial;
+      if (this.isAreaDifferent(data.area, this.TREM.variable.data.intensity[existingIndex].area)) {
+        this.TREM.variable.events.emit("IntensityUpdate", eventData);
+        this.TREM.variable.data.intensity[existingIndex] = data;
+      }
+    }
+
+    this.cleanupCache("intensity_last");
+
+    this.TREM.variable.events.emit("DataIntensity", {
+      info : { type: this.TREM.variable.play_mode },
+      data : this.TREM.variable.data.intensity,
     });
   }
 
