@@ -302,6 +302,28 @@ class Server {
     });
   }
 
+  isAreaDifferent(area1, area2) {
+    if (!area1 || !area2) {
+      return true;
+    }
+
+    const keys1 = Object.keys(area1);
+    const keys2 = Object.keys(area2);
+
+    if (keys1.length !== keys2.length) {
+      return true;
+    }
+
+    return keys1.some((key) => {
+      const arr1 = area1[key] || [];
+      const arr2 = area2[key] || [];
+      if (arr1.length !== arr2.length) {
+        return true;
+      }
+      return !arr1.every((val) => arr2.includes(val));
+    });
+  }
+
   processIntensityData(data = {}) {
     const currentTime = this.now();
     const EXPIRY_TIME = 600 * 1000;
