@@ -1,9 +1,9 @@
 {
-  "timestamp": 1738339507897,
-  "version": "1.1.8",
+  "timestamp": 1738454879288,
+  "version": "1.1.9",
   "fileHashes": {
     "index.js": "c96358a35eb421673485ff7d9d6b792a8bbafb679e2b93eff6b57cc2518cdf92",
-    "info.json": "67e3ed5aa3061d9212a9b346367c06e1fc028cf8644c3b5d86e3bcfebaf6514c",
+    "info.json": "533b9622d2588623b6eb094a63995bde4c6bfc955afae6fa0401aa529006b742",
     "node_modules/ws/browser.js": "010da44addea1d88b2b732540c3f1fd0cbcb28926b96623d4c64222e0ead2d0e",
     "node_modules/ws/index.js": "70a117e957f85622a6fe2be39afb9597489965fe3fe6ebefd84adb8f0d9d114a",
     "node_modules/ws/lib/buffer-util.js": "8b0a45739132f82e25ea13163780abf547ccfe989267f3eb7abb475beec92da3",
@@ -19,11 +19,14 @@
     "node_modules/ws/lib/validation.js": "41ce8e83d0d434132e1704895fedb91f6703a701b42d91c80954ab29b2845593",
     "node_modules/ws/lib/websocket-server.js": "5d0e592eb6e8b7628cbf6e2e6c703a3d6bda17139842b3a870ee9d67e336a77c",
     "node_modules/ws/lib/websocket.js": "54d9109c61ed004733718717d8cc9ffa02ec92c73f6852677a8814e847df6bfc",
+    "node_modules/ws/LICENSE": "2b29dcfe0d6471f7e8c92c5fb38c9f93edee10330937055440192f1832b1ecef",
+    "node_modules/ws/package.json": "2325e3ac70900fbbd08f858f6ecb2a7f8a66ead76ad225ac3fd24b992b36e9e4",
+    "node_modules/ws/README.md": "bb979132f3cbff08ce47f36d041e18071f8f534d01f591c0b129ba7abf1e480e",
     "node_modules/ws/wrapper.mjs": "e37bddaf6d40a3b2ee107906f792cc5117e543cba776fa25f7aeeb3908637f7c",
     "resource/default.yml": "38136244b84fad33c8f38bfa96693c9fb573fa79e360525dc71e8faff1e0a0bf",
-    "src/server.js": "de043464b964491472bceae34161ea95728347bc5e2679e8dbaf95e9347c668a",
+    "src/server.js": "81ff075e72b142893cf853c5a1bba73b9850ee78c91a09e2ba13c838c02ad049",
     "src/utils/logger.js": "3c7867a1d32bb13bcdb8181e77ba2d06c6a8eb9028dc79091f07b7626c53c8d8"
   },
-  "signature": "m/I4SVkOs3+y8ttdoPN/HgnwcnpOFvrlFHKdI9ha5Y5N5Qj8ocRYPGbvT8R3usawSAUAW8FU6zulXptEroDXgUMOydLb7IUTczUWEFl2ZIcXeff4s1T+fDDXhxcYujbtNdJNqVEW3A5PeBL5PKOKkkHtxfDMUmt3wVEzggmduDO4Q7mBZdor1uh1Kwho8alK1tRg9O/6Fub30kwV6J5jbcvGDmiP/paU5BgHaxprDz8uNTBkbsnuOVs8cnFWLhWiPQxDrU2upPaZwcdJeI6hUnY9uBNc/kApRWfZvXedppHDsu7FJTBho+h62Bk5nYnpEeUf+uYOPWot1MyA+M47jA==",
+  "signature": "JC1p/hc9Q13c+MCuE+xyCK1doNeAwcfORut+12xl2hmfFUQfnELBcvcwfQRMak82eVzQbkdzPldOA834BcrMwhhCJI5Z3pgUvThvCRPh/CqfZONeGcuIxVbufxUGM0PG/pdJCr1s/Qni8ihp/MtIeTUgcYhLCW7pWtBGZP4+zi2Bm2L5Fum6eU3jxWmJSFe0QPxhbwSUvI0xUbHf2knbjhXKm8x3NSE8Ih3stlzkMtGjds89gjFKWKeq8AYFZgsZj+2CyDc3dIX1SVDcGucLa5RvjEx3GtSknP4i1TtDoFZqvgzECli3xBltnr0/ALrCz6/QSx9KtsOMEsJM+T8+nQ==",
   "keyId": "official"
 }
