@@ -2,7 +2,8 @@
   "name": "websocket",
   "version": "1.1.9",
   "description": {
-    "zh_tw": "TREM-Lite websocket Plugin"
+    "zh_tw": "使用 Websocket 連線取得穩定即時的 ExpTech 服務",
+    "zh-Hant": "使用 Websocket 連線取得穩定即時的 ExpTech 服務"
   },
   "author": [
     "whes1015",
