@@ -14,6 +14,7 @@
     "exptech": ">=1.0.2",
     "config": ">=1.0.3"
   },
+  "a":"a",
   "resources": ["AGPL-3.0"],
   "link": "https://github.com/ExpTechTW/TREM-Websocket-Plugin"
 }
