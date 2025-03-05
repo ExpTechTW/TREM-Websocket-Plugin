@@ -15,6 +15,9 @@ class Server {
     this.info_get = false;
     this.ws_gg = false;
 
+    this.ws_start_time = 0;
+    this.ws_off_num = 0;
+
     this.config = config;
     this.exptech_config = exptech_config;
     this.get_exptech_config = this.exptech_config.getConfig();
@@ -40,6 +43,10 @@ class Server {
   }
 
   runCheckconnect() {
+    if (this.ws_time !== 0 && Date.now() > this.ws_time + 3_000) {
+      this.logger.warn("ws time out 3 sec");
+      this.ws_off_fun();
+    }
     if (this.ws_gg)
       this.connect();
     else if ((Date.now() - this.ws_time > 30_000 && this.ws_time != 0))
@@ -89,15 +96,32 @@ class Server {
     this.ws_event();
   }
 
+  ws_off_fun() {
+    this.ws_off_num += 1;
+    this.logger.warn(`WebSocket connection warning: Disconnected ${this.ws_off_num} times`);
+    if ((Date.now() - 300_000) <= this.ws_start_time && this.ws_off_num >= 5) {
+      this.logger.error(`WebSocket connection error: Disconnected ${this.ws_off_num} times, stopping reconnection`);
+      this.reconnect = false;
+      this.TREM.variable.play_mode = 0;
+      const button = document.querySelector("#websocket");
+      button.title = "HTTP 切換到 WebSocket";
+    }
+  }
+
+  ws_gg_fun() {
+    this.ws_gg = true;
+    this.ws_off_fun();
+  }
+
   ws_event() {
     this.ws.onclose = () => {
-      this.ws_gg = true;
+      this.ws_gg_fun();
       this.logger.warn(this.connect_clock);
       this.logger.warn("WebSocket close");
     };
 
     this.ws.onerror = (error) => {
-      this.ws_gg = true;
+      this.ws_gg_fun();
       this.logger.error("WebSocket error:", error);
     };
 
@@ -124,6 +148,7 @@ class Server {
             this.ws = null;
           } else if (json.data.code == 200) {
             this.ws_time = Date.now();
+            if (this.ws_start_time == 0) this.ws_start_time = Date.now();
             if (!this.info_get) {
               this.info_get = true;
               this.logger.info("info:", json.data);
