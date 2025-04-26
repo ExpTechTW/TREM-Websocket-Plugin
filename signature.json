@@ -1,9 +1,10 @@
 {
-  "timestamp": 1738454879288,
-  "version": "1.1.9",
+  "timestamp": 1745630646041,
+  "version": "1.2.0",
   "fileHashes": {
     "index.js": "c96358a35eb421673485ff7d9d6b792a8bbafb679e2b93eff6b57cc2518cdf92",
-    "info.json": "533b9622d2588623b6eb094a63995bde4c6bfc955afae6fa0401aa529006b742",
+    "info.json": "5a60f5992348a14180194d0a9e4ce98cc5aaee7d9414325525ead50e85aa4795",
+    "node_modules/.package-lock.json": "a2ea1780e54257713a6fffcce3e38ee45ebce0078a4013f58f8ecf1b5f46d248",
     "node_modules/ws/browser.js": "010da44addea1d88b2b732540c3f1fd0cbcb28926b96623d4c64222e0ead2d0e",
     "node_modules/ws/index.js": "70a117e957f85622a6fe2be39afb9597489965fe3fe6ebefd84adb8f0d9d114a",
     "node_modules/ws/lib/buffer-util.js": "8b0a45739132f82e25ea13163780abf547ccfe989267f3eb7abb475beec92da3",
@@ -24,9 +25,9 @@
     "node_modules/ws/README.md": "bb979132f3cbff08ce47f36d041e18071f8f534d01f591c0b129ba7abf1e480e",
     "node_modules/ws/wrapper.mjs": "e37bddaf6d40a3b2ee107906f792cc5117e543cba776fa25f7aeeb3908637f7c",
     "resource/default.yml": "38136244b84fad33c8f38bfa96693c9fb573fa79e360525dc71e8faff1e0a0bf",
-    "src/server.js": "81ff075e72b142893cf853c5a1bba73b9850ee78c91a09e2ba13c838c02ad049",
+    "src/server.js": "5f0dfe402cc14ae1bd0b16b4bcffd5955ba6273a43b07db25cd20cd00899f9b4",
     "src/utils/logger.js": "3c7867a1d32bb13bcdb8181e77ba2d06c6a8eb9028dc79091f07b7626c53c8d8"
   },
-  "signature": "JC1p/hc9Q13c+MCuE+xyCK1doNeAwcfORut+12xl2hmfFUQfnELBcvcwfQRMak82eVzQbkdzPldOA834BcrMwhhCJI5Z3pgUvThvCRPh/CqfZONeGcuIxVbufxUGM0PG/pdJCr1s/Qni8ihp/MtIeTUgcYhLCW7pWtBGZP4+zi2Bm2L5Fum6eU3jxWmJSFe0QPxhbwSUvI0xUbHf2knbjhXKm8x3NSE8Ih3stlzkMtGjds89gjFKWKeq8AYFZgsZj+2CyDc3dIX1SVDcGucLa5RvjEx3GtSknP4i1TtDoFZqvgzECli3xBltnr0/ALrCz6/QSx9KtsOMEsJM+T8+nQ==",
+  "signature": "Z9m9/3+1UpeZqmR6vGF6V50PzjRbzew26wVjDMDhEzUroQ+zkObSpwbW/sxyXgzg+tRalyMB1CsnB0JGhh3MjwrARu14YwPWXyfxal6VsKcc/5YtTXxqq3iy4o2Zt7ecxquuM4cjxjj/70ns1+qQQEkL4bUm4ZHnJSmEXOgtm0nU35M1r0TfCrL9h/6FY77QjDX0b9z1g2h3Lsn5yO3S1TMuK5CIhtL6FUy0ONSFqYiLeY0T1G58uFqdq8XqPlEpezB9i4b1N0NTBKgA3T4UOvBx6EOTdBBRfER+TKCmq/bWigKWAdcDmWN/AQfuv3h2GdzkOsanjAhDDYWuXrK7Vw==",
   "keyId": "official"
 }
