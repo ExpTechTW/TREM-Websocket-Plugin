@@ -101,7 +101,16 @@ class Server {
     this.logger.warn(`WebSocket connection warning: Disconnected ${this.ws_off_num} times`);
     if ((Date.now() - 300_000) <= this.ws_start_time && this.ws_off_num >= 5) {
       this.logger.error(`WebSocket connection error: Disconnected ${this.ws_off_num} times, stopping reconnection`);
-      this.reconnect = false;
+      if (this.reconnect) this.reconnect = false;
+      if (this.connect_clock) {
+        clearInterval(this.connect_clock);
+        this.connect_clock = null;
+      }
+      this.ws_time = 0;
+      this.ws.close();
+      this.ws_gg = false;
+      this.ws = null;
+      this.logger.info("WebSocket close -> connection error");
       this.TREM.variable.play_mode = 0;
       const button = document.querySelector("#websocket");
       button.title = "HTTP 切換到 WebSocket";
