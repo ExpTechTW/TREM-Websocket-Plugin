@@ -23,12 +23,35 @@ class Server {
     this.get_exptech_config = this.exptech_config.getConfig();
     this.TREM = TREM;
 
+    // 檢查並可能移除 trem.rtw 服務
+    if (this.config.service.includes('trem.rtw') && localStorage.getItem('rtw-main-switch') !== 'true') {
+      this.config.service = this.config.service.filter(service => service !== 'trem.rtw');
+    }
+
     const rts = null, eew = null, intensity = null, lpgm = null, tsunami = null, report = null, rtw = null;
     this.data = { rts, eew, intensity, lpgm, tsunami, report, rtw };
+
+    this.configRTW = [
+      { keys: "1", value: "11339620", text: "即時測站波形圖1" },
+      { keys: "2", value: "11336952", text: "即時測站波形圖2" },
+      { keys: "3", value: "11334880", text: "即時測站波形圖3" },
+      { keys: "4", value: "11370676", text: "即時測站波形圖4" },
+      { keys: "5", value: "6126556", text: "即時測站波形圖5" },
+      { keys: "6", value: "6732340", text: "即時測站波形圖6" },
+    ];
 
     this.wsConfig = {
       type    : "start",
       service : this.config.service,
+      ...(localStorage.getItem('rtw-main-switch') === 'true' && {
+        config: {
+          "trem.rtw": this.configRTW.map(source =>
+            localStorage.getItem(`rtw-station-${source.keys}`)
+              ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
+              : parseInt(source.value)
+          )
+        }
+      }),
       key     : this.get_exptech_config.user.token ?? "",
     };
 
@@ -76,9 +99,22 @@ class Server {
         this.connect_clock = setInterval(() => this.runCheckconnect(), 3000);
       }
       this.get_exptech_config = this.exptech_config.getConfig();
+      // 檢查並可能移除 trem.rtw 服務
+      if (this.config.service.includes('trem.rtw') && localStorage.getItem('rtw-main-switch') !== 'true') {
+        this.config.service = this.config.service.filter(service => service !== 'trem.rtw');
+      }
       this.wsConfig = {
         type    : "start",
         service : this.config.service,
+        ...(localStorage.getItem('rtw-main-switch') === 'true' && {
+          config: {
+            "trem.rtw": this.configRTW.map(source =>
+              localStorage.getItem(`rtw-station-${source.keys}`)
+                ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
+                : parseInt(source.value)
+            )
+          }
+        }),
         key     : this.get_exptech_config.user.token ?? "",
       };
       this.connect();
@@ -236,6 +272,7 @@ class Server {
 							break;
 						case "rtw":
 							this.data.rtw = json.data;
+              this.TREM.variable.events.emit('rtwsend', this.data.rtw);
 							break;
             case "lpgm":
               this.logger.info("data lpgm:", json.data);
