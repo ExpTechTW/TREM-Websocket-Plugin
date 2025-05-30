@@ -1,4 +1,4 @@
-ver: 3 # config 版本
+ver: 4 # config 版本
 
 service: # 訂閱的服務
   - trem.rts
@@ -16,3 +16,4 @@ server: # websocket 伺服器地址
   - lb-4.exptech.dev
 
 SHOW_BOTH_EEW: false
+WS_OFF_PASS: false

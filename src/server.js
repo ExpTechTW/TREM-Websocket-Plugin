@@ -3,6 +3,9 @@ const WebSocket = require("../node_modules/ws/index");
 class Server {
   static instance;
   ws_verify_list = [];
+  reconnectDelay = 1000;  // 初始重連延遲
+  maxReconnectDelay = 30000;  // 最大延遲 30 秒
+  lastDataTime = 0;  // 新增最後資料接收時間追蹤
 
   constructor(logger, urls, config, exptech_config, TREM, MixinManager) {
     if (Server.instance)
@@ -11,11 +14,12 @@ class Server {
     this.logger = logger;
     this.urls = urls;
     this.ws = null;
-    this.reconnect = true;
+    // this.reconnect = true;
     this.info_get = false;
     this.ws_gg = false;
+    this.isConnecting = false;
 
-    this.ws_start_time = 0;
+    // this.ws_start_time = 0;
     this.ws_off_num = 0;
 
     this.config = config;
@@ -56,7 +60,6 @@ class Server {
     };
 
     this.ws_verify_list = Server.ws_verify_list;
-    this.ws_time = 0;
 
     this.connect();
 
@@ -66,14 +69,18 @@ class Server {
   }
 
   runCheckconnect() {
-    if (this.ws_time !== 0 && Date.now() > this.ws_time + 3_000) {
+    if (this.isConnecting) return;
+    if (this.lastDataTime !== 0 && Date.now() > this.lastDataTime + 3_000) {
       this.logger.warn("ws time out 3 sec");
       this.ws_off_fun();
     }
-    if (this.ws_gg)
-      this.connect();
-    else if ((Date.now() - this.ws_time > 30_000 && this.ws_time != 0))
-      this.connect();
+    if (this.ws_gg) {
+      this.reconnectDelay = Math.min(this.reconnectDelay * 3, this.maxReconnectDelay);
+      setTimeout(() => this.connect(), this.reconnectDelay);  // 動態延遲
+    } else if ((Date.now() - this.lastDataTime > 30_000 && this.lastDataTime !== 0)) {
+      this.reconnectDelay = Math.min(this.reconnectDelay * 3, this.maxReconnectDelay);
+      setTimeout(() => this.connect(), this.reconnectDelay);  // 動態延遲
+    }
   }
 
   get_ws_verify_list() {
@@ -81,19 +88,20 @@ class Server {
   }
 
   set_ws_open(ws_open) {
+    if (this.ws_off_num >= 5)
+      this.ws_off_num = 0;  // 重置斷線計數
     if (!ws_open) {
-      if (this.reconnect) this.reconnect = false;
+      // if (this.reconnect) this.reconnect = false;
       if (this.connect_clock) {
         clearInterval(this.connect_clock);
         this.connect_clock = null;
       }
-      this.ws_time = 0;
       this.ws.close();
       this.ws_gg = false;
       this.ws = null;
       this.logger.info("WebSocket close -> chenges");
     } else {
-      if (!this.reconnect) this.reconnect = true;
+      // if (!this.reconnect) this.reconnect = true;
       if (this.info_get) this.info_get = false;
       if (!this.connect_clock) {
         this.connect_clock = setInterval(() => this.runCheckconnect(), 3000);
@@ -117,14 +125,23 @@ class Server {
         }),
         key     : this.get_exptech_config.user.token ?? "",
       };
+      if (this.isConnecting) this.isConnecting = false;
       this.connect();
       this.logger.info("WebSocket open -> chenges");
     }
   }
 
   connect() {
-    if (!this.reconnect) return;
-    if (this.ws) this.ws.terminate();
+    // if (!this.reconnect || this.isConnecting) return;
+    if (this.isConnecting) return;
+
+    if (this.ws) {
+      if (this.ws.readyState === WebSocket.CONNECTING) {
+        return;  // 避免終止正在連接中的 WebSocket
+      }
+      this.ws.terminate();
+    }
+    this.isConnecting = true;  // 標記連線中狀態
     this.ws = null;
     const url = `wss://${this.urls[Math.floor(Math.random() * this.urls.length)]}/websocket`;
     this.ws = new WebSocket(url);
@@ -133,17 +150,26 @@ class Server {
   }
 
   ws_off_fun() {
+    if (this.config.WS_OFF_PASS) {
+      this.reconnectDelay = 1000;  // 重置延遲計數
+      return;
+    }
     this.ws_off_num += 1;
     this.logger.warn(`WebSocket connection warning: Disconnected ${this.ws_off_num} times`);
-    if ((Date.now() - 300_000) <= this.ws_start_time && this.ws_off_num >= 5) {
+    if (this.ws_off_num >= 5) {
+      this.reconnectDelay = 1000;  // 重置延遲計數
       this.logger.error(`WebSocket connection error: Disconnected ${this.ws_off_num} times, stopping reconnection`);
-      if (this.reconnect) this.reconnect = false;
+      // if (this.reconnect) this.reconnect = false;
       if (this.connect_clock) {
         clearInterval(this.connect_clock);
         this.connect_clock = null;
       }
-      this.ws_time = 0;
-      this.ws.close();
+      if (this.ws) {
+        if (this.ws.readyState === WebSocket.CONNECTING) {
+          this.ws.close();
+        }
+        this.ws.terminate();
+      }
       this.ws_gg = false;
       this.ws = null;
       this.logger.info("WebSocket close -> connection error");
@@ -159,18 +185,29 @@ class Server {
   }
 
   ws_event() {
-    this.ws.onclose = () => {
-      this.ws_gg_fun();
-      this.logger.warn(this.connect_clock);
+    this.ws.onclose = (event) => {
+      this.isConnecting = false;
+      // 1000: 正常關閉
+      // 1001: 終端離開，如關閉視窗、導航離開
+      // 1006: 異常關閉，如伺服器掛掉或網路問題
+      if (event.code === 1000 || event.code === 1001) {
+        this.logger.warn("WebSocket closed by client");
+      } else {
+        this.ws_gg_fun();
+        this.logger.warn("WebSocket connection lost:", event.code);
+      }
+      this.logger.warn("timer id:", this.connect_clock);
       this.logger.warn("WebSocket close");
     };
 
     this.ws.onerror = (error) => {
+      this.isConnecting = false;
       this.ws_gg_fun();
       this.logger.error("WebSocket error:", error);
     };
 
     this.ws.onopen = () => {
+      this.isConnecting = false;
       this.ws_gg = false;
       this.logger.info("WebSocket open");
 
@@ -178,22 +215,22 @@ class Server {
     };
 
     this.ws.onmessage = (evt) => {
+      this.lastDataTime = Date.now();
       const json = JSON.parse(evt.data);
 
       switch (json.type) {
         case "verify":{
+          this.logger.info("WebSocket -> verify");
           this.send(this.wsConfig);
           break;
         }
         case "info":{
           if (json.data.code == 401) {
-            this.reconnect = false;
+            // this.reconnect = false;
             this.logger.info("WebSocket close -> 401");
             this.ws.close();
             this.ws = null;
           } else if (json.data.code == 200) {
-            this.ws_time = Date.now();
-            if (this.ws_start_time == 0) this.ws_start_time = Date.now();
             if (!this.info_get) {
               this.info_get = true;
               this.logger.info("info:", json.data);
@@ -230,7 +267,6 @@ class Server {
         case "data":{
           switch (json.data.type) {
             case "rts":
-              this.ws_time = Date.now();
               this.data.rts = json.data.data;
               if (this.TREM.variable.play_mode == 1) {
                 this.TREM.variable.data.rts = this.data.rts;
