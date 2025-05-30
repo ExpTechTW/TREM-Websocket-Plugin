@@ -1,4 +1,4 @@
-ver: 2 # config 版本
+ver: 3 # config 版本
 
 service: # 訂閱的服務
   - trem.rts
@@ -7,6 +7,7 @@ service: # 訂閱的服務
   - websocket.eew
   - websocket.report
   - cwa.intensity
+  - trem.rtw
 
 server: # websocket 伺服器地址
   - lb-1.exptech.dev
