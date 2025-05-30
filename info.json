@@ -1,10 +1,14 @@
 {
   "name": "websocket",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": {
     "zh_tw": "使用 Websocket 連線取得穩定即時的 ExpTech 服務",
     "zh-Hant": "使用 Websocket 連線取得穩定即時的 ExpTech 服務"
   },
+  "loader": [
+    "setting",
+    "index"
+  ],
   "author": [
     "whes1015",
     "yayacat"
