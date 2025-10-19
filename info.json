@@ -1,6 +1,6 @@
 {
   "name": "websocket",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": {
     "zh_tw": "使用 Websocket 連線取得穩定即時的 ExpTech 服務",
     "zh-Hant": "使用 Websocket 連線取得穩定即時的 ExpTech 服務"
@@ -15,7 +15,7 @@
   ],
   "dependencies": {
     "trem": ">=3.1.0",
-    "exptech": ">=1.0.2",
+    "exptech": ">=1.1.0",
     "config": ">=1.0.3"
   },
   "resources": ["AGPL-3.0"],
