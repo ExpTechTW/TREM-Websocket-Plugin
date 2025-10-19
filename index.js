@@ -1,4 +1,5 @@
 const config = require("../config/config");
+const { ipcRenderer } = require("electron");
 
 class Plugin {
   static instance = null;
@@ -48,7 +49,7 @@ class Plugin {
     this.exptech_config = this.#exptech_config.getConfig();
 
     const server = require("./src/server");
-    this.#server = new server(this.logger, this.config.server, this.config, this.#exptech_config, TREM, MixinManager);
+    this.#server = new server(this.logger, this.config.server, this.config, this.#exptech_config, TREM, ipcRenderer);
 
     this.init(TREM);
     this.addClickEvent(TREM);

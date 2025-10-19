@@ -7,7 +7,7 @@ class Server {
   maxReconnectDelay = 30000;  // 最大延遲 30 秒
   lastDataTime = 0;  // 新增最後資料接收時間追蹤
 
-  constructor(logger, urls, config, exptech_config, TREM, MixinManager) {
+  constructor(logger, urls, config, exptech_config, TREM, ipcRenderer) {
     if (Server.instance)
       return Server.instance;
 
@@ -26,6 +26,14 @@ class Server {
     this.exptech_config = exptech_config;
     this.get_exptech_config = this.exptech_config.getConfig();
     this.TREM = TREM;
+    // this.ipcRenderer = ipcRenderer;
+
+    // this.ipcRenderer.on("update-rtw-station", (event, ans) => {
+    //   const keys = ans.keys - 1;
+    //   this.logger.info("Received keys:", keys);
+    //   this.logger.info("Received ans keys:", ans.keys);
+    //   this.logger.info("Received name:", ans.name);
+    // });
 
     // 檢查並可能移除 trem.rtw 服務
     if (this.config.service.includes('trem.rtw') && localStorage.getItem('rtw-main-switch') !== 'true') {
@@ -45,19 +53,22 @@ class Server {
     ];
 
     this.wsConfig = {
-      type    : "start",
-      service : this.config.service,
-      ...(localStorage.getItem('rtw-main-switch') === 'true' && {
-        config: {
-          "trem.rtw": this.configRTW.map(source =>
-            localStorage.getItem(`rtw-station-${source.keys}`)
-              ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
-              : parseInt(source.value)
-          )
-        }
-      }),
-      key     : this.get_exptech_config.user.token ?? "",
-    };
+        type    : "start",
+        // service : this.config.service,
+        // ...(localStorage.getItem('rtw-main-switch') === 'true' && {
+        //   config: {
+        //     "trem.rtw": this.configRTW.map(source =>
+        //       localStorage.getItem(`rtw-station-${source.keys}`)
+        //         ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
+        //         : parseInt(source.value)
+        //     )
+        //   }
+        // }),
+        token : this.get_exptech_config.user.token ?? "",
+        topic: this.config.service,
+        time: Date.now(),
+      };
+    this.logger.info("wsConfig", this.wsConfig);
 
     this.ws_verify_list = Server.ws_verify_list;
 
@@ -113,18 +124,21 @@ class Server {
       }
       this.wsConfig = {
         type    : "start",
-        service : this.config.service,
-        ...(localStorage.getItem('rtw-main-switch') === 'true' && {
-          config: {
-            "trem.rtw": this.configRTW.map(source =>
-              localStorage.getItem(`rtw-station-${source.keys}`)
-                ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
-                : parseInt(source.value)
-            )
-          }
-        }),
-        key     : this.get_exptech_config.user.token ?? "",
+        // service : this.config.service,
+        // ...(localStorage.getItem('rtw-main-switch') === 'true' && {
+        //   config: {
+        //     "trem.rtw": this.configRTW.map(source =>
+        //       localStorage.getItem(`rtw-station-${source.keys}`)
+        //         ? parseInt(localStorage.getItem(`rtw-station-${source.keys}`))
+        //         : parseInt(source.value)
+        //     )
+        //   }
+        // }),
+        token : this.get_exptech_config.user.token ?? "",
+        topic: this.config.service,
+        time: Date.now(),
       };
+      this.logger.info("wsConfig", this.wsConfig);
       if (this.isConnecting) this.isConnecting = false;
       this.connect();
       this.logger.info("WebSocket open -> chenges");
@@ -143,7 +157,7 @@ class Server {
     }
     this.isConnecting = true;  // 標記連線中狀態
     this.ws = null;
-    const url = `wss://${this.urls[Math.floor(Math.random() * this.urls.length)]}/websocket`;
+    const url = `wss://${this.urls[Math.floor(Math.random() * this.urls.length)]}/ws`;
     this.ws = new WebSocket(url);
     this.logger.info("websocket connecting to -> ", url);
     this.ws_event();
@@ -225,49 +239,48 @@ class Server {
           break;
         }
         case "info":{
-          if (json.data.code == 401) {
+          if (json.event != 'connect') {
             // this.reconnect = false;
             this.logger.info("WebSocket close -> 401");
             this.ws.close();
             this.ws = null;
-          } else if (json.data.code == 200) {
+          } else {
             if (!this.info_get) {
               this.info_get = true;
-              this.logger.info("info:", json.data);
-              this.ws_verify_list = json.data.list;
-              if (json.data.list.includes("trem.eew")) {
-                if (this.config.SHOW_BOTH_EEW) {
-                  this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'cwa');
-                  this.TREM.constant.EEW_AUTHOR.push("cwa");
-                  this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'trem');
-                  this.TREM.constant.EEW_AUTHOR.push("trem");
-                  this.TREM.constant.SHOW_TREM_EEW = true;
-                  localStorage.setItem(
-                    "eew-source-plugin",
-                    JSON.stringify(this.TREM.constant.EEW_AUTHOR),
-                  );
-                } else {
-                  this.TREM.constant.SHOW_TREM_EEW = true;
-                  const eewSource = JSON.parse(localStorage.getItem("eew-source-plugin")) || [];
-                  if (eewSource.includes("trem")) this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter(author => author != "cwa");
-                }
-                this.logger.info("EEW_AUTHOR:", this.TREM.constant.EEW_AUTHOR);
-              }
+              this.logger.info("info:", json);
+              this.ws_verify_list = json.topic.success;
+              // if (json.data.list.includes("trem.eew")) {
+              //   if (this.config.SHOW_BOTH_EEW) {
+              //     this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'cwa');
+              //     this.TREM.constant.EEW_AUTHOR.push("cwa");
+              //     this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter((author) => author != 'trem');
+              //     this.TREM.constant.EEW_AUTHOR.push("trem");
+              //     this.TREM.constant.SHOW_TREM_EEW = true;
+              //     localStorage.setItem(
+              //       "eew-source-plugin",
+              //       JSON.stringify(this.TREM.constant.EEW_AUTHOR),
+              //     );
+              //   } else {
+              //     this.TREM.constant.SHOW_TREM_EEW = true;
+              //     const eewSource = JSON.parse(localStorage.getItem("eew-source-plugin")) || [];
+              //     if (eewSource.includes("trem")) this.TREM.constant.EEW_AUTHOR = this.TREM.constant.EEW_AUTHOR.filter(author => author != "cwa");
+              //   }
+              //   this.logger.info("EEW_AUTHOR:", this.TREM.constant.EEW_AUTHOR);
+              // }
             }
             if (this.TREM.variable.play_mode != 2) {
               this.TREM.variable.play_mode = 1;
               const button = document.querySelector("#websocket");
               button.title = "WebSocket 切換到 HTTP";
             }
-          } else if (json.data.code == 400) {
-            this.send(this.wsConfig);
           }
           break;
         }
         case "data":{
-          switch (json.data.type) {
+          // this.logger.info("data:", json);
+          switch (json.payload.payload.type) {
             case "rts":
-              this.data.rts = json.data.data;
+              this.data.rts = json.payload.payload.data;
               if (this.TREM.variable.play_mode == 1) {
                 this.TREM.variable.data.rts = this.data.rts;
                 this.TREM.variable.events.emit("DataRts", {
@@ -282,40 +295,40 @@ class Server {
               }
               break;
             case "tsunami":
-              this.logger.info("data tsunami:", json.data);
-							this.data.tsunami = json.data;
+              this.logger.info("data tsunami:", json.payload.payload.data);
+							this.data.tsunami = json.payload.payload.data;
 							break;
 						case "eew":
-              this.logger.info("data eew:", json.data);
-              this.data.eew = json.data;
+              this.logger.info("data eew:", json.payload.payload.data);
+              this.data.eew = json.payload.payload.data;
               if (this.TREM.variable.play_mode == 1) this.processEEWData(this.data.eew);
               break;
             case "intensity":
-              this.logger.info("data intensity:", json.data);
-              this.data.intensity = json.data;
+              this.logger.info("data intensity:", json.payload.payload.data);
+              this.data.intensity = json.payload.payload.data;
               if (this.TREM.variable.play_mode === 1) this.processIntensityData(this.data.intensity);
 							break;
 						case "report":
-              this.logger.info("data report:", json.data);
-							this.data.report = json.data.data;
+              this.logger.info("data report:", json.payload.payload.data);
+							this.data.report = json.payload.payload.data;
               if (this.TREM.variable.play_mode === 1) {
                 const url = this.TREM.constant.URL.API[Math.floor(Math.random() * this.TREM.constant.URL.API.length)];
-                const data = json.data.data;
+                const data = json.payload.payload.data;
                 if (data) {
                   this.TREM.variable.events.emit('ReportRelease', { info: { url }, data });
                 }
               }
 							break;
 						case "rtw":
-							this.data.rtw = json.data;
+							this.data.rtw = json.payload.payload.data;
               this.TREM.variable.events.emit('rtwsend', this.data.rtw);
 							break;
             case "lpgm":
-              this.logger.info("data lpgm:", json.data);
-              this.data.lpgm = json.data;
+              this.logger.info("data lpgm:", json.payload.payload.data);
+              this.data.lpgm = json.payload.payload.data;
               break;
             default:
-              this.logger.info("data:", json.data);
+              this.logger.info("data:", json);
           }
           break;
         }
