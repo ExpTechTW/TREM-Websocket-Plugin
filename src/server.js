@@ -68,7 +68,7 @@ class Server {
         topic: this.config.service,
         time: Date.now(),
       };
-    this.logger.info("wsConfig", this.wsConfig);
+    // this.logger.info("wsConfig", this.wsConfig);
 
     this.ws_verify_list = Server.ws_verify_list;
 
@@ -138,7 +138,7 @@ class Server {
         topic: this.config.service,
         time: Date.now(),
       };
-      this.logger.info("wsConfig", this.wsConfig);
+      // this.logger.info("wsConfig", this.wsConfig);
       if (this.isConnecting) this.isConnecting = false;
       this.connect();
       this.logger.info("WebSocket open -> chenges");
